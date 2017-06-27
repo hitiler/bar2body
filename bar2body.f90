@@ -5,7 +5,8 @@
 !      屏幕输入d(分段长度)、r(平移距离即柱边长的一半)    *
 !输出：点的坐标(前面是柱的端头点，后面是中间插入点)      *
 !内容：主程序main()=>输入input()=>等距插值子程序insert-  *
-!      point(d)=>平移变换translation(r)=>输出output()    *
+!      point(d)=>平移变换translation(r)=>杆上节点排序get_*
+!      nodenumber()=>生成网格get_grid()=>输出output()    *
 !时间：2017-06-12     HIT     作者：hitiler              *
 !*********************************************************
 
@@ -16,10 +17,12 @@ module typedef
         integer,allocatable::area(:,:)
     end type
     type(transform)::t
-    integer::points,lines,nps,sumnp,sln,slg !nps(新点数),sumnp(计数)
+    integer::points,lines,nps,sumnp,sln,slg 
+    !nps(新点数),sumnp(计数),sln(节点数),slg(网格数)
     real::np(1000,3),tp(4000,4),tnp(4000,4)
     !np(插入点),tp(原端点变换后的点),tnp(插入点变换后的点)
     integer::nump(100),nub(4000,5),grid(4000,3)
+    !nump(新插点个数),nub(节点),grid(网格)
     end module
     
 !=========================================================
@@ -27,23 +30,23 @@ module typedef
 program main
     use typedef
     implicit none
-    real::d=0.2,r=0.2
-    character(12)::infile,outpointfile,outfacefile
+    real::d,r
+    character(12)::infile,outpointfile,outgridfile
     write(infile,'(a7)') 'bar.inp'
     write(outpointfile,'(a9)') 'point.inp'
-    write(outfacefile,'(a8)') 'face.inp'
+    write(outgridfile,'(a8)') 'grid.inp'
     open(10,file=infile,status='old')
     open(11,file=outpointfile,status='replace')
-    open(12,file=outfacefile,status='replace')
-    ! write(*,*)"please input distance and radius:"
-    ! read(*,*) d,r
+    open(12,file=outgridfile,status='replace')
+    write(*,*)"please input distance and radius:"
+    read(*,*) d,r
     call input_data()
     call insertpoint(d)
     call translation(r)
     call get_nodenumber()
     call get_grid()
     call output_pointdata()
-    call output_facedata()
+    call output_griddata()
     close(10)
     close(11)
     close(12)
@@ -56,9 +59,9 @@ subroutine input_data()
     use typedef
     implicit none
     integer::i,j
-    character::c
+    character::c  !c是读取但无用的信息，相当于跳过
+    read(10,*)c,points,lines !读第一行，点线的个数
     read(10,*)  !跳过avs信息行
-    read(10,*)points,lines !读第一行，点线的个数
     allocate(t%point(points,3))
     allocate(t%line(lines,2))
     do i=1,points
@@ -153,6 +156,7 @@ subroutine get_grid()
     slg=0
     sg=0
     sbg=0
+    !上述三个变量用来计数，没有意义
     do i=1,lines
         sg=0
         do j=1,nump(i)+1
@@ -202,7 +206,7 @@ subroutine output_pointdata()
     end subroutine
     
 !输出面的拓扑信息
-subroutine output_facedata()
+subroutine output_griddata()
     use typedef
     implicit none
     integer::i,j,k
